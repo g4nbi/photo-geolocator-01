@@ -507,7 +507,12 @@ export function extractFeatures(g: BlockGrid): Features {
 
 const FEATURE_KEYS: (keyof Features)[] = ['green', 'blue', 'bright', 'sat', 'sky', 'vegLow', 'dry', 'botBright'];
 // The indices are already scaled to comparable 0..1 ranges.
-const FEATURE_WEIGHTS = [1, 1, 1, 1, 1, 1, 1, 1];
+// Feature weights by between-region / within-region variance (F-ratio,
+// normalised), fitted on the 75 practice photos: sky is the most
+// discriminative, dry/botBright the least. Equal weights scored the same
+// within noise on the old centroids; with the corrected centroids the
+// F-weights win the proper LOO (6,958 vs 6,986 km).
+const FEATURE_WEIGHTS = [0.875464, 0.870493, 0.860609, 0.891708, 1.0, 0.700344, 0.595236, 0.481127];
 
 // ---------- Regions ----------
 // Anchor points (population centres) and the feature centroid of the
@@ -527,27 +532,29 @@ export const REGIONS: Region[] = [
   { name: 'US East', lat: 42.0, lon: -78.0, centroid: [0.890921, 0.892579, 0.524723, 0.340280, 1.000000, 0.810360, 0.181275, 0.590079] },
   { name: 'Canada North', lat: 55.0, lon: -105.0, centroid: [0.912078, 0.961750, 0.568183, 0.486519, 1.000000, 0.848607, 0.115510, 0.402085] },
   { name: 'Mexico', lat: 21.0, lon: -100.0, centroid: [0.742848, 0.798597, 0.554387, 0.159036, 0.881562, 0.650419, 0.190307, 0.413421] },
-  { name: 'Brazil', lat: -10.0, lon: -55.0, centroid: [0.642929, 0.598469, 0.460552, 0.349536, 0.788260, 0.593154, 0.509992, 0.338278] },
+  { name: 'Brazil', lat: -10.0, lon: -55.0, centroid: [0.540909, 0.483746, 0.445079, 0.274889, 0.727763, 0.484531, 0.617446, 0.306849] },
   { name: 'Southern Cone', lat: -34.0, lon: -64.0, centroid: [0.732575, 0.621214, 0.547838, 0.464262, 0.911634, 0.667435, 0.391703, 0.532473] },
   { name: 'Western Europe', lat: 49.0, lon: 4.0, centroid: [1.000000, 1.000000, 0.442630, 0.371373, 1.000000, 0.839246, 0.205933, 0.417696] },
-  { name: 'Scandinavia', lat: 62.0, lon: 14.0, centroid: [0.864596, 0.840377, 0.498341, 0.330800, 0.871208, 0.867009, 0.216826, 0.431203] },
-  { name: 'Eastern Europe', lat: 52.0, lon: 28.0, centroid: [0.726960, 0.763099, 0.523067, 0.223189, 0.909259, 0.650002, 0.336794, 0.448849] },
-  { name: 'Russia East', lat: 55.0, lon: 60.0, centroid: [0.771886, 0.685418, 0.444788, 0.264169, 0.910896, 0.641775, 0.352874, 0.269644] },
-  { name: 'Middle East', lat: 27.0, lon: 45.0, centroid: [0.483499, 0.649016, 0.546936, 0.330809, 0.921704, 0.377695, 0.432996, 0.401813] },
-  { name: 'Sub-Saharan Africa', lat: -1.0, lon: 28.0, centroid: [0.885028, 0.833333, 0.475238, 0.399446, 0.906381, 0.786826, 0.234076, 0.413999] },
+  { name: 'Scandinavia', lat: 62.0, lon: 14.0, centroid: [0.891677, 0.872302, 0.503757, 0.375326, 0.896967, 0.893607, 0.173461, 0.408742] },
+  { name: 'Eastern Europe', lat: 52.0, lon: 28.0, centroid: [0.671374, 0.761352, 0.546542, 0.183994, 0.922189, 0.570908, 0.387142, 0.479225] },
+  { name: 'Russia East', lat: 55.0, lon: 60.0, centroid: [0.720218, 0.644025, 0.422601, 0.217618, 0.838022, 0.611196, 0.396508, 0.259548] },
+  { name: 'Middle East', lat: 27.0, lon: 45.0, centroid: [0.543478, 0.636448, 0.553551, 0.292535, 0.937363, 0.435113, 0.431137, 0.434373] },
+  { name: 'Sub-Saharan Africa', lat: -1.0, lon: 28.0, centroid: [0.913771, 0.875000, 0.487240, 0.445638, 0.929786, 0.840119, 0.175557, 0.414987] },
   { name: 'South Asia', lat: 24.0, lon: 80.0, centroid: [0.766585, 0.776782, 0.443390, 0.149396, 0.941230, 0.720629, 0.233415, 0.379271] },
   { name: 'East Asia', lat: 34.0, lon: 128.0, centroid: [0.624448, 0.432301, 0.429356, 0.147807, 0.564206, 0.575352, 0.596644, 0.416377] },
   { name: 'SE Asia', lat: 12.0, lon: 103.0, centroid: [0.722223, 0.674390, 0.422961, 0.227944, 0.775223, 0.604402, 0.384879, 0.349992] },
-  { name: 'Oceania', lat: -27.0, lon: 140.0, centroid: [0.819674, 0.856145, 0.381979, 0.269375, 1.000000, 0.657907, 0.457156, 0.238191] },
+  { name: 'Oceania', lat: -27.0, lon: 140.0, centroid: [0.855739, 0.884916, 0.399900, 0.314703, 1.000000, 0.715659, 0.419287, 0.298703] },
 ];
 
 /** The region guess for a photo's features: the inverse-distance-weighted
- * mean of the three nearest region anchors, blended halfway toward the
- * practice photos' centre of mass (28, 60). The features are noisy -- a
+ * mean of the three nearest region anchors, blended 60% toward the
+ * practice photos' centre of mass (55, 30). The features are noisy -- a
  * hard nearest-centroid pick is worse than a fixed point on the practice
  * photos -- so the guess stays soft and central unless the evidence is
- * strong. A photo left unanswered would count the maximum error, so the
- * fallback always answers. */
+ * strong. Constants tuned by proper leave-one-out on the 75 practice
+ * photos (LOO mean 6,986 km vs 7,394 km for the old 50%/(28,60)/eps 0.02
+ * constants). A photo left unanswered would count the maximum error, so
+ * the fallback always answers. */
 export function guessFromFeatures(f: Features): { lat: number; lon: number; region: string } {
   const v = FEATURE_KEYS.map((k) => f[k]);
   const scored = REGIONS.map((r) => {
@@ -563,13 +570,13 @@ export function guessFromFeatures(f: Features): { lat: number; lon: number; regi
   let lat = 0;
   let lon = 0;
   for (const t of top) {
-    const w = 1 / (t.d + 0.02);
+    const w = 1 / (t.d + 0.1);
     wsum += w;
     lat += w * t.r.lat;
     lon += w * t.r.lon;
   }
-  lat = (lat / wsum) * 0.5 + BLIND_LAT * 0.5;
-  lon = (lon / wsum) * 0.5 + BLIND_LON * 0.5;
+  lat = (lat / wsum) * 0.4 + BLIND_LAT * 0.6;
+  lon = (lon / wsum) * 0.4 + BLIND_LON * 0.6;
   return { lat, lon, region: top[0]!.r.name };
 }
 
@@ -581,10 +588,10 @@ export function guessFromJpeg(jpeg: Buffer): { lat: number; lon: number; region:
 }
 
 // ---------- Main ----------
-// Blind default when a photo will not decode at all: near the practice
-// photos' centre of mass, which beats any unanswered photo by ~10,000 km.
-const BLIND_LAT = 28.0;
-const BLIND_LON = 60.0;
+// Blind default when a photo will not decode at all: the practice photos'
+// centre of mass, which beats any unanswered photo by ~10,000 km.
+const BLIND_LAT = 55.0;
+const BLIND_LON = 30.0;
 
 async function main(): Promise<number> {
   envUrl = need('MAKEFUN_ENV_URL').replace(/\/+$/, '');
